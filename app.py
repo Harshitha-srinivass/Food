@@ -13,7 +13,7 @@ import os
 
 app = Flask(__name__,template_folder='templates')
 
-print("Templates directory contents:", os.listdir('Templates'))
+print("Templates directory contents:", os.listdir('templates'))
 
 
 uri = "mongodb+srv://harshitha4607:VtOSrvuqDvzPBZaJ@fooddelivery.ygmqq.mongodb.net/?appName=fooddelivery"
