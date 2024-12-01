@@ -1,0 +1,116 @@
+name: CI/CD for Dockerized Flask Food Delivery Website
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest
+
+      - name: Run tests
+        run: pytest tests/
+
+  docker-build-and-publish:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and Push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ secrets.DOCKER_USERNAME }}/food-delivery-flask-app:latest
+          cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/food-delivery-flask-app:cache  # Docker layer caching
+          cache-to: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/food-delivery-flask-app:cache,mode=max  # Push cache
+
+  deploy-to-ec2:
+    needs: docker-build-and-publish
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          echo "Host *" >> ~/.ssh/config
+          echo "  StrictHostKeyChecking no" >> ~/.ssh/config
+          echo "  UserKnownHostsFile=/dev/null" >> ~/.ssh/config
+
+      - name: Test SSH Connection
+        uses: appleboy/ssh-action@v0.1.6
+        with:
+          host: ${{ secrets.EC2_PUBLIC_IP }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+          port: 22
+          timeout: '300s'
+          command_timeout: '120s'
+          debug: true
+          script: echo "SSH connection successful"
+
+      - name: Install Docker and configure user on EC2
+        uses: appleboy/ssh-action@v0.1.6
+        with:
+          host: ${{ secrets.EC2_PUBLIC_IP }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+          port: 22
+          timeout: '300s'
+          command_timeout: '300s'
+          debug: true
+          script: |
+            sudo apt update
+            sudo apt install -y docker.io
+            sudo systemctl enable docker
+            sudo systemctl start docker
+            sudo usermod -aG docker ubuntu
+            newgrp docker
+
+      - name: SSH into EC2 and deploy Docker container
+        uses: appleboy/ssh-action@v0.1.6
+        with:
+          host: ${{ secrets.EC2_PUBLIC_IP }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+          port: 22
+          timeout: '300s'
+          command_timeout: '300s'
+          debug: true
+          script: |
+            docker stop food-delivery-container || true
+            docker rm food-delivery-container || true
+            docker pull ${{ secrets.DOCKER_USERNAME }}/food-delivery-flask-app:latest
+            docker run -d --name food-delivery-container -p 5000:5000 ${{ secrets.DOCKER_USERNAME }}/food-delivery-flask-app:latest
