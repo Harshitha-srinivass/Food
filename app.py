@@ -16,7 +16,7 @@ app = Flask(__name__,template_folder='templates')
 print("Templates directory contents:", os.listdir('Templates'))
 
 
-uri = "mongodb+srv://balaji01975:li1wSy7d7hjOVZpl@food.djaiqj7.mongodb.net/?appName=food"
+uri = "mongodb+srv://harshitha4607:VtOSrvuqDvzPBZaJ@fooddelivery.ygmqq.mongodb.net/?retryWrites=true&w=majority&appName=fooddelivery"
 
 # Database
 client = MongoClient(uri, server_api=ServerApi('1'))
@@ -27,8 +27,6 @@ except Exception as e:
     print(e)
 db = client.food_website
 collection = db.food_items
-
-
 
 # Decorators
 def login_required(f):
@@ -137,3 +135,4 @@ def register():
 def dashboard():
   return render_template('dashboard.html')
 
+app.config['DEBUG'] = True
