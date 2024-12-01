@@ -8,11 +8,10 @@ WORKDIR /app
 COPY requirements.txt /app/
 
 # Install any necessary dependencies specified in requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install -r requirements.txt
 
 # Copy the Flask application code into the container
 COPY . /app/
-COPY house_data.csv /app/data/
 
 # Expose the port the Flask app will run on
 EXPOSE 5000
