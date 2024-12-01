@@ -12,9 +12,9 @@ RUN pip install -r requirements.txt
 
 # Copy the Flask application code into the con
 COPY . /app/
-COPY ./templates /app/templates
+COPY ./Templates /app/Templates
 
-# Expose the port the Flask app will run on
+# Expose the port the Flask app will run 
 
 EXPOSE 5000
 
