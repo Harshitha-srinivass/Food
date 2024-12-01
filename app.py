@@ -17,8 +17,7 @@ print("Templates directory contents:", os.listdir('Templates'))
 
 
 uri = "mongodb+srv://harshitha4607:VtOSrvuqDvzPBZaJ@fooddelivery.ygmqq.mongodb.net/?retryWrites=true&w=majority&appName=fooddelivery"
-
-# Database
+# Databas
 client = MongoClient(uri, server_api=ServerApi('1'))
 try:
     client.admin.command('ping')
